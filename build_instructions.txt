@@ -1,0 +1,12 @@
+Required software:
+
+- Microsoft Visual Studio 2015
+- 7-Zip (http://www.7-zip.org/)
+- 7-Zip Extra - standalone console version (add the location to your PATH environment variable)
+
+
+Build instructions:
+
+- Open a "Developer Command Prompt for VS2015" and change the working directory to the root of this archive
+- Run "build.bat"
+- You can find the result in: src\bin\Release
