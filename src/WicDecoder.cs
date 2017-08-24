@@ -119,7 +119,7 @@ namespace PaintDotNet.WicDecoder
             return bmpSource;
         }
 
-        public static Bitmap BitmapFromSource(BitmapSource bitmapsource)
+        private static Bitmap BitmapFromSource(BitmapSource bitmapsource)
         {
             Bitmap bitmap;
             using (var outStream = new MemoryStream())
