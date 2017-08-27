@@ -52,6 +52,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IniFile.cs" />
     <Compile Include="WicCodecs.cs" />
     <Compile Include="WicDecoder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

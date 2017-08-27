@@ -25,7 +25,9 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using Microsoft.Win32;
 
 namespace PaintDotNet.WicDecoder
@@ -56,7 +58,8 @@ namespace PaintDotNet.WicDecoder
                                 {
                                     foreach (string extension in extensionList)
                                     {
-                                        if (!extensionDictionary.ContainsKey(extension))
+                                        if (!extensionDictionary.ContainsKey(extension) &&
+                                            !IsExtensionExcluded(extension.Substring(1)))
                                         {
                                             extensionDictionary.Add(extension, extension);
                                         }
@@ -68,14 +71,14 @@ namespace PaintDotNet.WicDecoder
                 }
             }
 
-            if (!extensionDictionary.ContainsKey(".bmp")) extensionDictionary.Add(".bmp", ".bmp");
-            if (!extensionDictionary.ContainsKey(".dib")) extensionDictionary.Add(".dib", ".dib");
-            if (!extensionDictionary.ContainsKey(".jpg")) extensionDictionary.Add(".jpg", ".jpg");
-            if (!extensionDictionary.ContainsKey(".jpeg")) extensionDictionary.Add(".jpeg", ".jpeg");
-            if (!extensionDictionary.ContainsKey(".gif")) extensionDictionary.Add(".gif", ".gif");
-            if (!extensionDictionary.ContainsKey(".tif")) extensionDictionary.Add(".tif", ".tif");
-            if (!extensionDictionary.ContainsKey(".tiff")) extensionDictionary.Add(".tiff", ".tiff");
-            if (!extensionDictionary.ContainsKey(".png")) extensionDictionary.Add(".png", ".png");
+            if (!extensionDictionary.ContainsKey(".bmp")  && !IsExtensionExcluded("bmp"))  extensionDictionary.Add(".bmp", ".bmp");
+            if (!extensionDictionary.ContainsKey(".dib")  && !IsExtensionExcluded("dib"))  extensionDictionary.Add(".dib", ".dib");
+            if (!extensionDictionary.ContainsKey(".jpg")  && !IsExtensionExcluded("jpg"))  extensionDictionary.Add(".jpg", ".jpg");
+            if (!extensionDictionary.ContainsKey(".jpeg") && !IsExtensionExcluded("jpeg")) extensionDictionary.Add(".jpeg", ".jpeg");
+            if (!extensionDictionary.ContainsKey(".gif")  && !IsExtensionExcluded("gif"))  extensionDictionary.Add(".gif", ".gif");
+            if (!extensionDictionary.ContainsKey(".tif")  && !IsExtensionExcluded("tif"))  extensionDictionary.Add(".tif", ".tif");
+            if (!extensionDictionary.ContainsKey(".tiff") && !IsExtensionExcluded("tiff")) extensionDictionary.Add(".tiff", ".tiff");
+            if (!extensionDictionary.ContainsKey(".png")  && !IsExtensionExcluded("png"))  extensionDictionary.Add(".png", ".png");
 
             var finalList = new List<string>(extensionDictionary.Values);
             finalList.Sort();
@@ -91,6 +94,21 @@ namespace PaintDotNet.WicDecoder
                 var extensions = (string)regKeyCodec.GetValue("FileExtensions", "");
                 return extensions.ToLower().Split(',').ToList();
             }
+        }
+
+        private static bool IsExtensionExcluded(string extension)
+        {
+            string assemblyFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            string configPath = Path.Combine(assemblyFolder, "WicDecoder.ini");
+
+            IniFile config = new IniFile(configPath);
+
+            if (config.ReadValue("Extensions", extension).ToLower() == "excluded")
+            {
+                return true;
+            }
+
+            return false;
         }
     }
 }
