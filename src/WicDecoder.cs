@@ -124,7 +124,8 @@ namespace PaintDotNet.WicDecoder
             Bitmap bitmap;
             using (var outStream = new MemoryStream())
             {
-                BitmapEncoder enc = new BmpBitmapEncoder();
+                // Use a PNG encoder to support transparency
+                BitmapEncoder enc = new PngBitmapEncoder();
                 enc.Frames.Add(BitmapFrame.Create(bitmapsource));
                 enc.Save(outStream);
                 bitmap = new Bitmap(outStream);
