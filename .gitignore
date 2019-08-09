@@ -14,6 +14,7 @@ x64/
 build/
 [Bb]in/
 [Oo]bj/
+.vs/
 
 # Enable "build/" folder in the NuGet Packages folder since NuGet packages use it for MSBuild targets
 !packages/*/build/
@@ -45,6 +46,7 @@ build/
 *.pidb
 *.log
 *.scc
+*.lnk
 
 # Visual C++ cache files
 ipch/
@@ -163,5 +165,3 @@ Source/.vs/ImageGlass.sqlite
 *.cache
 *.sqlite
 .vs/VSWorkspaceState.json
-Setup/ImageGlass_4.0.4.15.exe
-Setup/ImageGlass_4.1.7.26.exe

@@ -24,86 +24,112 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+using PaintDotNet;
+using PaintDotNet.PropertySystem;
 using System.Drawing;
 using System.IO;
-using System.Reflection;
 using System.Windows.Media.Imaging;
 
-namespace PaintDotNet.WicDecoder
+// ReSharper disable once CheckNamespace
+namespace WicDecoder
 {
-    public sealed class WicDecoderTypeFactory : IFileTypeFactory
+    public sealed class DdsFileTypeFactory : IFileTypeFactory
     {
         public FileType[] GetFileTypeInstances()
         {
-            return new[] { new WicDecoderType() };
+            return new FileType[] { new WicDecoderType() };
         }
     }
 
-    internal class WicDecoderType : FileType
+    internal class WicDecoderType : PropertyBasedFileType
     {
-        internal WicDecoderType() :
-            base("WIC Decoder", FileTypeFlags.SupportsLoading, WicCodecs.GetSupportedExtensions())
+        public WicDecoderType() :
+            base(
+                "WIC Decoder",
+                new FileTypeOptions()
+                {
+                    LoadExtensions = WicCodecs.GetSupportedExtensions(),
+                    SupportsCancellation = false,
+                    SupportsLayers = false
+                })
         {
         }
 
         protected override Document OnLoad(Stream input)
         {
-            FieldInfo fi = input.GetType().GetField("stream", BindingFlags.NonPublic | BindingFlags.Instance);
-            FileStream fs = fi.GetValue(input) as FileStream;
+            int numberOfFrames = GetNumberOfFrames(input);
 
-            using (var image = LoadRAW(fs.Name))
+            if (numberOfFrames == 1)
             {
-                var document = Document.FromImage(image);
-                var numberOfFrames = GetNumberOfFrames(fs.Name);
-                var size = new Size(image.Width, image.Height);
-
-                if (numberOfFrames <= 1)
+                using (var image = LoadFrameAsBitmap(input))
                 {
-                    return document;
-                }
-                else
-                {
-                    document.Layers.Clear();
-                    for (int i = 0; i < numberOfFrames; i++)
-                    {
-                        using (var layer = LoadRAW(fs.Name, i))
-                        using (var surface = Surface.CopyFromBitmap(layer))
-                        {
-                            if (surface.Size == size)
-                            {
-                                var bitmapLayer = new BitmapLayer(surface);
-                                bitmapLayer.Name = "Frame " + (i + 1);
-                                document.Layers.Insert(0, bitmapLayer);
-                            }
-                        }
-                    }
-                    return document;
+                    return Document.FromImage(image);
                 }
             }
+
+            if (numberOfFrames > 1)
+            {
+                Size size;
+                Document document;
+
+                using (var frame = LoadFrameAsBitmap(input))
+                {
+                    size = new Size(frame.Width, frame.Height);
+                    document = new Document(size);
+                }
+
+                for (int i = 0; i < numberOfFrames; i++)
+                {
+                    using (var frame = LoadFrameAsBitmap(input, i))
+                    using (var surface = Surface.CopyFromBitmap(frame))
+                    {
+                        if (surface.Size == size)
+                        {
+                            var bitmapLayer = new BitmapLayer(surface)
+                            {
+                                Name = "Frame " + (i + 1)
+                            };
+                            document.Layers.Insert(0, bitmapLayer);
+                        }
+                    }
+                }
+
+                return document;
+            }
+
+            throw new System.ArgumentException();
         }
 
-        private static Bitmap LoadRAW(string filename, int frameIndex = 0)
+        protected override void OnSaveT(Document input, Stream output, PropertyBasedSaveConfigToken token, Surface scratchSurface,
+            ProgressEventHandler progressCallback)
         {
-            var bitmapSource = LoadImage(filename, frameIndex);
+            throw new System.NotImplementedException();
+        }
+
+        public override PropertyCollection OnCreateSavePropertyCollection()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        private static Bitmap LoadFrameAsBitmap(Stream input, int frameIndex = 0)
+        {
+            input.Seek(0, SeekOrigin.Begin);
+            var bitmapSource = LoadFrameAsBitmapSource(input, frameIndex);
             return BitmapFromSource(bitmapSource);
         }
 
-        private static BitmapSource LoadImage(string filename, int frameIndex)
+        private static BitmapSource LoadFrameAsBitmapSource(Stream input, int frameIndex)
         {
-            using (var inFile = File.OpenRead(filename))
-            {
-                var decoder = BitmapDecoder.Create(inFile, BitmapCreateOptions.None, BitmapCacheOption.None);
-                return Convert(decoder.Frames[frameIndex]);
-            }
+            input.Seek(0, SeekOrigin.Begin);
+            var decoder = BitmapDecoder.Create(input, BitmapCreateOptions.None, BitmapCacheOption.None);
+            return Convert(decoder.Frames[frameIndex]);
         }
 
-        private static int GetNumberOfFrames(string filename)
+        private static int GetNumberOfFrames(Stream input)
         {
-            using (var inFile = File.OpenRead(filename))
-            {
-                var decoder = BitmapDecoder.Create(inFile, BitmapCreateOptions.None, BitmapCacheOption.None);
-                return decoder.Frames.Count;
-            }
+            input.Seek(0, SeekOrigin.Begin);
+            var decoder = BitmapDecoder.Create(input, BitmapCreateOptions.None, BitmapCacheOption.None);
+            return decoder.Frames.Count;
         }
 
         private static BitmapSource Convert(BitmapFrame frame)
@@ -121,16 +147,14 @@ namespace PaintDotNet.WicDecoder
 
         private static Bitmap BitmapFromSource(BitmapSource bitmapsource)
         {
-            Bitmap bitmap;
             using (var outStream = new MemoryStream())
             {
                 // Use a PNG encoder to support transparency
                 BitmapEncoder enc = new PngBitmapEncoder();
                 enc.Frames.Add(BitmapFrame.Create(bitmapsource));
                 enc.Save(outStream);
-                bitmap = new Bitmap(outStream);
+                return new Bitmap(outStream);
             }
-            return bitmap;
         }
     }
 }
